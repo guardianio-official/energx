@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine # Using PostgreSQL 15
+    container_name: ghexchange_postgres_db
+    environment:
+      POSTGRES_USER: ${DB_USER:-ghexchangeuser} # Fallback if not set in .env, but .env should be primary source
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ghexchangepassword}
+      POSTGRES_DB: ${DB_NAME:-ghexchange_db}
+    ports:
+      - "${DB_PORT:-5432}:5432" # Exposes PostgreSQL to host on DB_PORT (default 5432)
+    volumes:
+      - ghexchange_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ghexchangeuser} -d ${DB_NAME:-ghexchange_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: . # Assumes Dockerfile is in platform_backend/
+      dockerfile: Dockerfile # Will create this Dockerfile next
+    container_name: ghexchange_flask_backend
+    depends_on:
+      db:
+        condition: service_healthy # Wait for DB to be healthy
+    ports:
+      - "5000:5000" # Exposes Flask app on port 5000
+    environment:
+      # Pass all necessary environment variables from .env file
+      # For Flask app (these should be in your .env file)
+      - FLASK_APP=${FLASK_APP}
+      - FLASK_ENV=${FLASK_ENV}
+      - DEBUG=${DEBUG}
+      # For Database connection (ensure these match .env and are used by app/__init__.py)
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db # Service name for PostgreSQL within Docker network
+      - DB_PORT=${DB_PORT} # Usually 5432 for PostgreSQL
+      - DB_NAME=${DB_NAME}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      # Potentially PYTHONUNBUFFERED=1 for better logging from Docker
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app # Mounts the current directory (platform_backend) into /app in the container
+                # This allows for live code changes during development without rebuilding image (if using Flask dev server)
+    # If you need to run migrations automatically on startup, you might add a command or entrypoint script.
+    # For now, migrations will be run manually against the Dockerized DB.
+    # command: ["flask", "run", "--host=0.0.0.0"] # Default command if not in Dockerfile CMD
+
+volumes:
+  ghexchange_postgres_data: # Defines the named volume for data persistence
+    driver: local
