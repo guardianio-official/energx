@@ -1,0 +1,16 @@
+Flask>=2.0
+Flask-SQLAlchemy>=2.5
+Flask-Migrate>=3.0
+Flask-JWT-Extended>=4.0
+Werkzeug>=2.0
+Flask-Bcrypt>=1.0.1
+Flask-CORS>=3.0.10 # Added for Cross-Origin Resource Sharing
+python-dotenv>=0.19 # For managing environment variables
+psycopg2-binary # If using PostgreSQL (recommended, but will use SQLite for now if complex)
+# If using SQLite, psycopg2-binary is not strictly needed but good to list if planning to switch.
+# For SQLite, no separate driver package is typically needed as it's built into Python.
+
+# Testing libraries
+pytest>=7.0
+pytest-flask>=1.2.0
+Faker>=10.0
